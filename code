@@ -1,0 +1,652 @@
+from fastapi import FastAPI, Query
+from fastapi.responses import HTMLResponse
+import random
+import string
+
+app = FastAPI()
+
+def generate_password(length: int = 12, use_digits: bool = True, 
+                     use_symbols: bool = True, use_uppercase: bool = True) -> str:
+    """Генерация безопасного пароля"""
+    
+    chars = string.ascii_lowercase
+    
+    if use_uppercase:
+        chars += string.ascii_uppercase
+    if use_digits:
+        chars += string.digits
+    if use_symbols:
+        chars += "!@#$%^&*()-_=+[]{}|;:,.<>?"
+    
+    password = []
+    
+    if use_uppercase:
+        password.append(random.choice(string.ascii_uppercase))
+    if use_digits:
+        password.append(random.choice(string.digits))
+    if use_symbols:
+        password.append(random.choice("!@#$%^&*()-_=+[]{}|;:,.<>?"))
+    
+    password.append(random.choice(string.ascii_lowercase))
+    
+    remaining = length - len(password)
+    if remaining > 0:
+        password.extend(random.choices(chars, k=remaining))
+    
+    random.shuffle(password)
+    
+    return ''.join(password)
+
+@app.get("/", response_class=HTMLResponse)
+async def index():
+    return """
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SecurePass | Генератор паролей</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Roboto', sans-serif;
+                background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+                position: relative;
+            }
+            
+            /* Спокойный фоновый узор */
+            body::before {
+                content: '';
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                background-image: radial-gradient(circle at 25% 50%, rgba(56, 189, 248, 0.03) 0%, transparent 50%);
+                pointer-events: none;
+            }
+            
+            /* Основной контейнер */
+            .container {
+                background: rgba(30, 41, 59, 0.7);
+                backdrop-filter: blur(12px);
+                border-radius: 28px;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+                padding: 40px;
+                max-width: 520px;
+                width: 100%;
+                transition: all 0.3s ease;
+                border: 1px solid rgba(71, 85, 105, 0.5);
+            }
+            
+            /* Заголовок */
+            .header {
+                text-align: center;
+                margin-bottom: 32px;
+            }
+            
+            .logo-icon {
+                width: 64px;
+                height: 64px;
+                background: linear-gradient(135deg, #3b82f6, #2563eb);
+                border-radius: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 16px;
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            }
+            
+            .logo-icon i {
+                font-size: 32px;
+                color: white;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+                color: #f1f5f9;
+                font-weight: 600;
+                letter-spacing: -0.3px;
+                margin-bottom: 6px;
+            }
+            
+            .subtitle {
+                color: #94a3b8;
+                font-size: 0.85em;
+            }
+            
+            /* Поле пароля */
+            .password-card {
+                background: #0f172a;
+                border-radius: 20px;
+                padding: 20px;
+                margin-bottom: 28px;
+                border: 1px solid #334155;
+                transition: all 0.2s;
+            }
+            
+            .password-card:focus-within {
+                border-color: #3b82f6;
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            }
+            
+            .password-field {
+                display: flex;
+                gap: 12px;
+                align-items: center;
+                background: #0f172a;
+            }
+            
+            .password-field i {
+                font-size: 1.2em;
+                color: #60a5fa;
+            }
+            
+            #password {
+                flex: 1;
+                background: transparent;
+                border: none;
+                padding: 12px 0;
+                font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+                font-size: 1.1em;
+                font-weight: 500;
+                color: #e2e8f0;
+                letter-spacing: 0.5px;
+                outline: none;
+            }
+            
+            .copy-btn {
+                background: #1e293b;
+                border: 1px solid #334155;
+                padding: 8px 16px;
+                border-radius: 12px;
+                cursor: pointer;
+                transition: all 0.2s;
+                color: #cbd5e1;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 0.85em;
+                font-weight: 500;
+            }
+            
+            .copy-btn:hover {
+                background: #334155;
+                border-color: #475569;
+                color: #f1f5f9;
+                transform: translateY(-1px);
+            }
+            
+            .copy-btn:active {
+                transform: translateY(0);
+            }
+            
+            /* Слайдер длины */
+            .setting-group {
+                margin-bottom: 24px;
+            }
+            
+            .setting-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                margin-bottom: 12px;
+            }
+            
+            .setting-label {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                color: #cbd5e1;
+                font-size: 0.9em;
+                font-weight: 500;
+            }
+            
+            .setting-label i {
+                color: #60a5fa;
+                font-size: 0.9em;
+            }
+            
+            .setting-value {
+                background: #1e293b;
+                padding: 4px 12px;
+                border-radius: 12px;
+                color: #60a5fa;
+                font-weight: 600;
+                font-size: 0.85em;
+            }
+            
+            input[type="range"] {
+                width: 100%;
+                height: 4px;
+                border-radius: 4px;
+                background: #1e293b;
+                outline: none;
+                -webkit-appearance: none;
+            }
+            
+            input[type="range"]::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                background: #3b82f6;
+                cursor: pointer;
+                border: 2px solid #60a5fa;
+                transition: transform 0.1s;
+            }
+            
+            input[type="range"]::-webkit-slider-thumb:hover {
+                transform: scale(1.2);
+            }
+            
+            /* Чекбоксы */
+            .options-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 12px;
+                margin-bottom: 28px;
+            }
+            
+            .option {
+                background: #0f172a;
+                border: 1px solid #334155;
+                border-radius: 14px;
+                padding: 12px;
+                transition: all 0.2s;
+            }
+            
+            .option:hover {
+                background: #1e293b;
+                border-color: #475569;
+            }
+            
+            .option label {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                cursor: pointer;
+                color: #cbd5e1;
+                font-size: 0.85em;
+                font-weight: 500;
+            }
+            
+            .option i {
+                font-size: 1em;
+                color: #60a5fa;
+                width: 20px;
+            }
+            
+            .option input[type="checkbox"] {
+                width: 16px;
+                height: 16px;
+                cursor: pointer;
+                accent-color: #3b82f6;
+                margin-left: auto;
+            }
+            
+            /* Кнопка генерации */
+            .generate-btn {
+                width: 100%;
+                background: linear-gradient(135deg, #3b82f6, #2563eb);
+                color: white;
+                border: none;
+                padding: 14px;
+                border-radius: 16px;
+                font-size: 1em;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                margin-bottom: 20px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            }
+            
+            .generate-btn:hover {
+                background: linear-gradient(135deg, #2563eb, #1d4ed8);
+                transform: translateY(-1px);
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+            }
+            
+            .generate-btn:active {
+                transform: translateY(0);
+            }
+            
+            /* Индикатор силы */
+            .strength-card {
+                background: #0f172a;
+                border-radius: 16px;
+                padding: 16px;
+                border: 1px solid #334155;
+            }
+            
+            .strength-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 12px;
+                color: #94a3b8;
+                font-size: 0.8em;
+                font-weight: 500;
+            }
+            
+            .strength-header i {
+                color: #60a5fa;
+            }
+            
+            .strength-bar {
+                height: 4px;
+                border-radius: 4px;
+                background: #1e293b;
+                margin-bottom: 12px;
+                overflow: hidden;
+            }
+            
+            .strength-fill {
+                height: 100%;
+                width: 0%;
+                transition: width 0.3s ease;
+                border-radius: 4px;
+            }
+            
+            .strength-text {
+                font-size: 0.8em;
+                font-weight: 500;
+                text-align: center;
+            }
+            
+            .weak .strength-fill {
+                width: 33%;
+                background: #ef4444;
+            }
+            .weak .strength-text {
+                color: #f87171;
+            }
+            
+            .medium .strength-fill {
+                width: 66%;
+                background: #f59e0b;
+            }
+            .medium .strength-text {
+                color: #fbbf24;
+            }
+            
+            .strong .strength-fill {
+                width: 100%;
+                background: #10b981;
+            }
+            .strong .strength-text {
+                color: #34d399;
+            }
+            
+            /* Уведомление */
+            .toast {
+                position: fixed;
+                bottom: 30px;
+                left: 50%;
+                transform: translateX(-50%) translateY(100px);
+                background: #1e293b;
+                border: 1px solid #334155;
+                color: #e2e8f0;
+                padding: 10px 20px;
+                border-radius: 40px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 0.85em;
+                transition: transform 0.3s ease;
+                z-index: 1000;
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+                backdrop-filter: blur(8px);
+            }
+            
+            .toast.show {
+                transform: translateX(-50%) translateY(0);
+            }
+            
+            .toast i {
+                color: #10b981;
+            }
+            
+            /* Адаптивность */
+            @media (max-width: 500px) {
+                .container {
+                    padding: 24px;
+                }
+                
+                .options-grid {
+                    grid-template-columns: 1fr;
+                    gap: 8px;
+                }
+                
+                .password-field {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+                
+                .copy-btn {
+                    justify-content: center;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <div class="logo-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h1>SecurePass</h1>
+                <div class="subtitle">Надёжный генератор паролей</div>
+            </div>
+            
+            <div class="password-card">
+                <div class="password-field">
+                    <i class="fas fa-lock"></i>
+                    <input type="text" id="password" readonly value="Нажмите создать">
+                    <button class="copy-btn" id="copyBtn">
+                        <i class="fas fa-copy"></i>
+                        <span>Копировать</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="setting-group">
+                <div class="setting-header">
+                    <span class="setting-label">
+                        <i class="fas fa-arrows-alt-h"></i>
+                        <span>Длина пароля</span>
+                    </span>
+                    <span class="setting-value" id="lengthValue">12</span>
+                </div>
+                <input type="range" id="length" min="4" max="32" value="12">
+            </div>
+            
+            <div class="options-grid">
+                <div class="option">
+                    <label>
+                        <i class="fas fa-arrow-up"></i>
+                        <span>A-Z</span>
+                        <input type="checkbox" id="uppercase" checked>
+                    </label>
+                </div>
+                <div class="option">
+                    <label>
+                        <i class="fas fa-hashtag"></i>
+                        <span>0-9</span>
+                        <input type="checkbox" id="digits" checked>
+                    </label>
+                </div>
+                <div class="option">
+                    <label>
+                        <i class="fas fa-star-of-life"></i>
+                        <span>!@#</span>
+                        <input type="checkbox" id="symbols" checked>
+                    </label>
+                </div>
+            </div>
+            
+            <button class="generate-btn" id="generateBtn">
+                <i class="fas fa-sync-alt"></i>
+                <span>Создать пароль</span>
+            </button>
+            
+            <div class="strength-card" id="strengthCard">
+                <div class="strength-header">
+                    <i class="fas fa-chart-simple"></i>
+                    <span>Надёжность пароля</span>
+                </div>
+                <div class="strength-bar">
+                    <div class="strength-fill"></div>
+                </div>
+                <div class="strength-text" id="strengthText">Ожидание</div>
+            </div>
+        </div>
+        
+        <div class="toast" id="toast">
+            <i class="fas fa-check-circle"></i>
+            <span id="toastMessage">Готово</span>
+        </div>
+        
+        <script>
+            let currentPassword = "";
+            
+            const lengthSlider = document.getElementById('length');
+            const lengthValue = document.getElementById('lengthValue');
+            const uppercaseCheck = document.getElementById('uppercase');
+            const digitsCheck = document.getElementById('digits');
+            const symbolsCheck = document.getElementById('symbols');
+            const generateBtn = document.getElementById('generateBtn');
+            const copyBtn = document.getElementById('copyBtn');
+            const passwordInput = document.getElementById('password');
+            const strengthCard = document.getElementById('strengthCard');
+            const strengthText = document.getElementById('strengthText');
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            function updateLengthValue() {
+                lengthValue.textContent = lengthSlider.value;
+            }
+            
+            async function generatePassword() {
+                const length = lengthSlider.value;
+                const useUppercase = uppercaseCheck.checked;
+                const useDigits = digitsCheck.checked;
+                const useSymbols = symbolsCheck.checked;
+                
+                if (!useUppercase && !useDigits && !useSymbols) {
+                    showToast("Выберите хотя бы один тип символов", "error");
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/generate?length=${length}&use_uppercase=${useUppercase}&use_digits=${useDigits}&use_symbols=${useSymbols}`);
+                    const data = await response.json();
+                    currentPassword = data.password;
+                    passwordInput.value = currentPassword;
+                    updateStrength(currentPassword);
+                } catch (error) {
+                    console.error('Ошибка:', error);
+                    showToast("Ошибка генерации", "error");
+                }
+            }
+            
+            function updateStrength(password) {
+                let score = 0;
+                
+                if (password.length >= 12) score++;
+                if (password.length >= 16) score++;
+                if (/[A-Z]/.test(password)) score++;
+                if (/[0-9]/.test(password)) score++;
+                if (/[!@#$%^&*()\\-_=+[\\]{}|;:,.<>?]/.test(password)) score++;
+                
+                strengthCard.classList.remove('weak', 'medium', 'strong');
+                
+                if (score <= 2) {
+                    strengthCard.classList.add('weak');
+                    strengthText.textContent = 'Слабый · Рекомендуем увеличить длину';
+                } else if (score <= 4) {
+                    strengthCard.classList.add('medium');
+                    strengthText.textContent = 'Средний · Можно улучшить';
+                } else {
+                    strengthCard.classList.add('strong');
+                    strengthText.textContent = 'Сильный · Отлично подходит для защиты';
+                }
+            }
+            
+            function copyPassword() {
+                if (!currentPassword || currentPassword === "Нажмите создать") {
+                    showToast("Сначала создайте пароль", "error");
+                    return;
+                }
+                
+                navigator.clipboard.writeText(currentPassword).then(() => {
+                    showToast("Пароль скопирован", "success");
+                }).catch(() => {
+                    showToast("Не удалось скопировать", "error");
+                });
+            }
+            
+            function showToast(message, type = "success") {
+                const icon = toast.querySelector('i');
+                toastMessage.textContent = message;
+                
+                if (type === "success") {
+                    icon.className = "fas fa-check-circle";
+                    icon.style.color = "#10b981";
+                } else {
+                    icon.className = "fas fa-exclamation-triangle";
+                    icon.style.color = "#f87171";
+                }
+                
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 2000);
+            }
+            
+            // Обработчики событий
+            lengthSlider.addEventListener('input', updateLengthValue);
+            generateBtn.addEventListener('click', generatePassword);
+            copyBtn.addEventListener('click', copyPassword);
+            
+            // Авто-генерация при изменении настроек
+            uppercaseCheck.addEventListener('change', generatePassword);
+            digitsCheck.addEventListener('change', generatePassword);
+            symbolsCheck.addEventListener('change', generatePassword);
+            lengthSlider.addEventListener('change', generatePassword);
+            
+            // Инициализация
+            updateLengthValue();
+            generatePassword();
+        </script>
+    </body>
+    </html>
+    """
+
+@app.get("/generate")
+async def generate(
+    length: int = Query(12, ge=4, le=32),
+    use_uppercase: bool = Query(True),
+    use_digits: bool = Query(True),
+    use_symbols: bool = Query(True)
+):
+    """API endpoint для генерации пароля"""
+    password = generate_password(length, use_digits, use_symbols, use_uppercase)
+    return {"password": password}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000)
